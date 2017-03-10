@@ -30,6 +30,7 @@ int main(int argc, char **argv)
 	ros::Publisher chatter_pub_robot1 = n.advertise<geometry_msgs::Twist>("/robot1/cmd_vel", 1000);
 	ros::Publisher chatter_pub_robot2 = n.advertise<geometry_msgs::Twist>("/robot2/cmd_vel", 1000);
 	ros::Publisher chatter_pub_robot3 = n.advertise<geometry_msgs::Twist>("/robot3/cmd_vel", 1000);
+	ros::Publisher chatter_pub_robot4 = n.advertise<geometry_msgs::Twist>("/robot4/cmd_vel", 1000);
 	ros::Rate loop_rate(10);
 	int socket_fd;   /* file description into transport */
 	int recfd; /* file descriptor to accept        */
@@ -107,6 +108,10 @@ int main(int argc, char **argv)
 		 */
 	
 		geometry_msgs::Twist msg;
+		geometry_msgs::Twist cmd_vel_robot1;
+		geometry_msgs::Twist cmd_vel_robot2;
+		geometry_msgs::Twist cmd_vel_robot3;
+		geometry_msgs::Twist cmd_vel_robot4;
 		//split message into correspoinding parameter
 		/*coordinate rotation
 		 *omni	UAV
@@ -122,10 +127,17 @@ int main(int argc, char **argv)
 		msg.angular.x = 0.0;
 		msg.angular.y = 0.0;
 		msg.angular.z = 0.0;
+
+
+		
+
+
+
 			
-		chatter_pub_robot1.publish( msg );
-		chatter_pub_robot2.publish( msg );
-		chatter_pub_robot3.publish( msg );
+		chatter_pub_robot1.publish( cmd_vel_robot1 );
+		chatter_pub_robot2.publish( cmd_vel_robot2 );
+		chatter_pub_robot3.publish( cmd_vel_robot3 );
+		chatter_pub_robot3.publish( cmd_vel_robot4 );
 	
 		ros::spinOnce();
 		loop_rate.sleep();
