@@ -1,10 +1,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
-
-#include <sstream>
 
 #include <unistd.h>
 #include <netinet/in.h>	//for sockaddr_in
@@ -16,6 +13,7 @@
 #include <sys/socket.h>
 #include <sys/errno.h>
 #include <string.h>
+#include <sstream>
 
 //#define SERV_ADDR "192.168.205.128"
 //#define SERV_ADDR "127.0.0.1"
@@ -23,12 +21,16 @@
 #define MAXNAME 1024
 extern int errno;
 
-//const int BUFSIZ = 2048;
+const int Hz = 10;
 std::stringstream ss_state_robot1, ss_state_robot2, ss_state_robot3, ss_state_robot4;
 std::string s_state_robot1, s_state_robot2, s_state_robot3, s_state_robot4;
 
 void state_robot1Callback(const nav_msgs::Odometry::ConstPtr& receiveState)
 {
+  /*
+   * clear the old contents and fill the new values in sstream
+   * and then transform into string type
+   */
   ss_state_robot1.str("");
   ss_state_robot1.clear();
   ss_state_robot1 << receiveState->pose.pose.position.x << " "
@@ -71,6 +73,8 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "UDP_server");
   ros::NodeHandle n;
+  ros::Rate loop_rate(Hz);
+
   ros::Publisher pub_cmd_vel_robot1 = n.advertise<geometry_msgs::Twist>("/robot1/cmd_vel", 1000);
   ros::Publisher pub_cmd_vel_robot2 = n.advertise<geometry_msgs::Twist>("/robot2/cmd_vel", 1000);
   ros::Publisher pub_cmd_vel_robot3 = n.advertise<geometry_msgs::Twist>("/robot3/cmd_vel", 1000);
@@ -81,16 +85,14 @@ int main(int argc, char **argv)
   ros::Subscriber sub_state_robot3 = n.subscribe("/robot3/ground_truth/state", 1000, state_robot3Callback);
   ros::Subscriber sub_state_robot4 = n.subscribe("/robot4/ground_truth/state", 1000, state_robot4Callback);
 
-  ros::Rate loop_rate(10);
   int socket_fd;   /* file description into transport */
-  int recfd; /* file descriptor to accept        */
-  int length; /* length of address structure      */
-  int nbytes; /* the number of read **/
-  //char buf[BUFSIZ];
+  int recfd; /* file descriptor to accept */
+  int length; /* length of address structure */
+  int nbytes; /* the number of read */
   struct sockaddr_in myaddr; /* address of this service */
-  struct sockaddr_in client_addr; /* address of client    */
+  struct sockaddr_in client_addr; /* address of client */
   /*
-   *      Get a socket into UDP/IP
+   * Get a socket into UDP/IP
    */
   if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) <0)
   {
@@ -98,7 +100,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
   /*
-   *    Set up our address
+   * Set up our address
    */
   bzero ((char *)&myaddr, sizeof(myaddr));
   myaddr.sin_family = AF_INET;
@@ -106,9 +108,9 @@ int main(int argc, char **argv)
   myaddr.sin_port = htons(SERV_PORT);
 
   /*
-   *     Bind to the address to which the service will be offered
+   * Bind to the address to which the service will be offered
    */
-  if (bind(socket_fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) <0)
+  if (bind(socket_fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0)
   {
     perror ("bind failed\n");
     exit(1);
@@ -125,7 +127,7 @@ int main(int argc, char **argv)
     printf("Server is ready to receive !!\n");
     char buf[BUFSIZ];	//receive from client
     //printf("Can strike Cntrl-c to stop Server >>\n");
-    if ((nbytes = recvfrom(socket_fd, &buf, MAXNAME, 0, (struct sockaddr*)&client_addr, (socklen_t *)&length)) <0)
+    if ((nbytes = recvfrom(socket_fd, &buf, MAXNAME, 0, (struct sockaddr*)&client_addr, (socklen_t *)&length)) < 0)
     {
       perror ("could not read datagram!!");
       continue;
@@ -136,40 +138,43 @@ int main(int argc, char **argv)
     printf("%s\n", buf);
     */
 
-    /* return to client */
+    /*
+     * return to client
+     */
+
 
     std::string pos_feedback = s_state_robot1 + s_state_robot2 + s_state_robot3 + s_state_robot4;
-    const char* send_buf = new char[pos_feedback.length()+1];
+    std::cout << pos_feedback << std::endl;
+    const char *send_buf;
     send_buf = pos_feedback.c_str();
-    if (sendto(socket_fd, &send_buf, MAXNAME, 0, (struct sockaddr*)&client_addr, length) < 0)
+    if (sendto(socket_fd, send_buf, MAXNAME, 0, (struct sockaddr*)&client_addr, length) < 0)
     {
       perror("Could not send datagram!!\n");
       continue;
     }
     std::cout << "send: " << send_buf << std::endl;
 
+    /*
+    char test[] = "1.2 2.2 3.2 4.2 5.2 6.2 7.2 8.2 9.2 10.2 11.2 12.2";
+    puts(test);
+
+    if (sendto(socket_fd, test, MAXNAME, 0, (struct sockaddr*)&client_addr, length) < 0)
+    {
+      perror("Could not send datagram!!\n");
+      continue;
+    }*/
+
 
     //printf("Can Strike Crtl-c to stop Server >>\n");
-
-    /*
-     * 		std_msgs::String msg;
-     * 		std::stringstream ss;
-     * 		ss << "hello world " << count;
-     * 		msg.data = ss.str();
-     *
-     * 		ROS_INFO("%s", msg.data.c_str());
-     */
 
     geometry_msgs::Twist cmd_vel_robot1;
     geometry_msgs::Twist cmd_vel_robot2;
     geometry_msgs::Twist cmd_vel_robot3;
     geometry_msgs::Twist cmd_vel_robot4;
-		//split message into correspoinding parameter
-    /*coordinate rotation(not used here)
-		 *omni	UAV
-		 * x	 y
-		 * y	 z
-		 * z 	 x
+    /* split message into correspoinding parameter
+     * coordinate rotation
+     * omni x y z
+     * UAV  y z x
 		 */
 		char *token = NULL, *rest_message = NULL;
 		const char *delim = " ";
@@ -202,7 +207,9 @@ int main(int argc, char **argv)
     cmd_vel_robot4.angular.y = 0.0;
     cmd_vel_robot4.angular.z = 0.0;
 
-    //publish command to robot respectively
+    /*
+     * publish command to robot respectively
+     */
     pub_cmd_vel_robot1.publish( cmd_vel_robot1 );
     pub_cmd_vel_robot2.publish( cmd_vel_robot2 );
     pub_cmd_vel_robot3.publish( cmd_vel_robot3 );
